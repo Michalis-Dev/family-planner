@@ -52,7 +52,7 @@ async function session(){
  try{await load()}catch(e){err(e)}
 }
 q('#authSwitch').onclick=()=>{signUp=!signUp;show('#nameLabel',signUp);show('#nameInput',signUp);q('#authSubmit').textContent=signUp?'Εγγραφή':'Σύνδεση';q('#authSwitch').textContent=signUp?'Έχω ήδη λογαριασμό':'Δημιουργία λογαριασμού'};
-q('#authForm').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target);const email=d.get('email'),password=d.get('password');let r=signUp?await db.auth.signUp({email,password,options:{data:{full_name:d.get('full_name')}}}):await db.auth.signInWithPassword({email,password});
+q('#authForm').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target);const email=d.get('email'),password=d.get('password');let r=signUp?await db.auth.signUp({email,password,options:{data:{full_name:d.get('full_name')},emailRedirectTo:new URL('./',window.location.href).href}}):await db.auth.signInWithPassword({email,password});
  q('#authMsg').textContent=r.error?r.error.message:(signUp?'Έλεγξε το email σου για επιβεβαίωση.':'');if(!r.error)await session()};
 q('#logout').onclick=async()=>{await db.auth.signOut();await session()};
 q('#createFamily').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target);const r=await db.rpc('create_family',{p_name:d.get('name'),p_display_name:user.user_metadata?.full_name||'Μέλος'});if(r.error)q('#familyMsg').textContent=r.error.message;else await load()};
