@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17475a"><meta name="description" content="Ιδιωτικό οικογενειακό ημερολόγιο δραστηριοτήτων">
+<title>Family Planner</title><link rel="manifest" href="./manifest.webmanifest">
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#1b3643;background:#f4f7f9}*{box-sizing:border-box}body{margin:0}button,input,textarea,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}.hidden{display:none!important}
+header{background:#164455;color:white;padding:19px max(20px,calc((100vw - 1050px)/2));display:flex;align-items:center;justify-content:space-between;gap:15px}header strong{font-size:20px}header small{display:block;color:#a8d0d7;font-size:12px;margin-top:3px}
+main{max-width:1050px;margin:auto;padding:25px 16px 85px}.panel{background:#fff;border:1px solid #e2e9ec;border-radius:20px;padding:22px;box-shadow:0 6px 22px #183b4b0b;margin:0 0 18px}
+h1{font-size:27px;letter-spacing:-.7px;margin:0 0 12px}h2{font-size:19px;margin:0 0 15px}p{line-height:1.5}.muted{color:#718b97;font-size:14px}.error{color:#af3943}.ok{color:#26795f}.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.spread{justify-content:space-between}.grid{display:grid;grid-template-columns:1.4fr 1fr;gap:18px}label{display:block;font-weight:650;font-size:13px;margin:12px 0 6px}
+input,select,textarea{width:100%;padding:11px 12px;border:1px solid #d3dfe4;border-radius:10px;background:white;color:#173544}input:focus,select:focus,textarea:focus{outline:2px solid #9bd6d0}
+button{border:0;padding:11px 16px;border-radius:11px;background:#1f827e;color:white;font-weight:700}button.light{background:#e9f3f3;color:#215b67}button.danger{background:#fdeaea;color:#9c313a}button.ghost{background:transparent;color:inherit;padding:8px}
+button.sm{padding:7px 10px;font-size:12px}.calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}.dayname{text-align:center;font-size:11px;color:#6f8793;padding:8px 0}.day{height:83px;background:#f5f9fa;border:1px solid transparent;border-radius:11px;padding:7px;text-align:left;color:#234150;display:flex;flex-direction:column;gap:5px;overflow:hidden}.day.out{opacity:.28}.day.current{border-color:#3c9c96}.day.chosen{background:#d9eeeb;border-color:#168078}.day b{font-size:13px}.day em{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:normal}.item{border:1px solid #e1e9ea;border-left:5px solid #1f827e;padding:13px;margin:9px 0;border-radius:12px;display:flex;justify-content:space-between;gap:10px}.item.done{opacity:.6}.item b{display:block}.item small{color:#768c96}.item p{margin:5px 0 0;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}.item .actions{display:flex;align-items:start;gap:6px;flex-wrap:wrap}.pill{display:inline-block;border-radius:20px;background:#e6f2f0;color:#236d69;font-size:11px;padding:4px 9px;margin:4px 0}
+.auth{max-width:420px;margin:45px auto}.line{border:0;border-top:1px solid #e1e8ec;margin:18px 0}.notice{padding:12px 14px;background:#fff4d6;border-radius:12px;font-size:13px;margin-bottom:18px}.family-code{font-family:ui-monospace,monospace;font-size:14px;word-break:break-all;background:#f0f5f7;padding:10px;border-radius:10px}
+dialog{border:0;border-radius:20px;padding:24px;width:min(95vw,480px);box-shadow:0 30px 80px #1238}dialog::backdrop{background:#152d3daa}.mobile{display:none}
+@media(max-width:740px){.grid{grid-template-columns:1fr}header{padding:15px}header strong{font-size:18px}main{padding:15px 10px 75px}.panel{padding:15px}.day{height:64px;padding:5px}.day em{font-size:9px}.mobile{display:block}.item{flex-direction:column}}
+</style></head><body>
+<header><div><strong>📅 Family Planner</strong><small>Το ημερολόγιο της οικογένειάς μας</small></div><div class="row"><span id="who"></span><button id="logout" class="light sm hidden">Έξοδος</button></div></header>
+<main>
+<section id="setup" class="panel auth"><h1>Καλώς ήρθες!</h1><div class="notice">Η σύνδεση στη βάση δεν έχει ρυθμιστεί. Δεν αποθηκεύονται δεδομένα στο GitHub.</div><p>Για να ξεκινήσεις, δημιούργησε ένα δωρεάν Supabase project, εκτέλεσε το <code>schema.sql</code> και συμπλήρωσε το <code>config.js</code> με το Project URL και το publishable key.</p><p class="muted">Μην τοποθετήσεις ποτέ service_role / secret key στον κώδικα.</p></section>
+<section id="auth" class="panel auth hidden"><h1>Πρόσβαση στην οικογένεια</h1><p class="muted">Μόνο εγκεκριμένοι λογαριασμοί μπορούν να διαβάσουν τις δραστηριότητες.</p>
+<form id="authForm"><label>Email</label><input name="email" type="email" required autocomplete="email"><label>Κωδικός</label><input name="password" type="password" required minlength="8" autocomplete="current-password"><label id="nameLabel" class="hidden">Το όνομά σου</label><input id="nameInput" name="full_name" class="hidden" maxlength="80"><p><button id="authSubmit">Σύνδεση</button> <button type="button" class="light" id="authSwitch">Δημιουργία λογαριασμού</button></p></form><p id="authMsg" class="muted"></p></section>
+<section id="familySetup" class="panel auth hidden"><h1>Οικογενειακός χώρος</h1><p class="muted">Δημιούργησε οικογένεια ή χρησιμοποίησε τον κωδικό πρόσκλησης από το άλλο μέλος.</p><form id="createFamily"><label>Όνομα οικογένειας</label><input name="name" placeholder="Η οικογένειά μας" required maxlength="80"><p><button>Δημιουργία</button></p></form><hr class="line"><form id="joinFamily"><label>Κωδικός πρόσκλησης</label><input name="code" placeholder="Επικόλλησε τον κωδικό" required><p><button class="light">Συμμετοχή</button></p></form><p id="familyMsg" class="error"></p></section>
+<section id="app" class="hidden"><div class="row spread"><div><h1 id="familyName">Ημερολόγιο</h1><p class="muted">Όλες οι δραστηριότητες σε ένα μέρος</p></div><div class="row"><button id="newActivity">+ Νέα δραστηριότητα</button></div></div>
+<div class="grid"><section class="panel"><div class="row spread"><h2 id="monthName"></h2><div class="row"><button class="light sm" id="prevMonth">‹</button><button class="light sm" id="today">Σήμερα</button><button class="light sm" id="nextMonth">›</button></div></div><div class="calendar" id="calendar"></div></section>
+<section><div class="panel"><h2 id="dayTitle">Δραστηριότητες ημέρας</h2><div id="dayList"></div></div><div class="panel"><div class="row spread"><h2>Παιδιά</h2><button id="newChild" class="light sm">+ Προσθήκη</button></div><div id="childrenList"></div></div>
+<div class="panel"><h2>Κοινή πρόσβαση</h2><p class="muted">Δώσε τον παρακάτω κωδικό μόνο σε άτομο που εμπιστεύεσαι. Αφού συνδεθεί, θα έχει πρόσβαση στο κοινό ημερολόγιο.</p><div id="invite" class="family-code"></div></div></section></div></section>
+<p id="status" role="status" class="muted"></p></main>
+<dialog id="activityDialog"><form id="activityForm"><h2>Δραστηριότητα</h2><input type="hidden" name="id"><label>Τίτλος</label><input name="title" required maxlength="160"><label>Ημερομηνία</label><input name="activity_date" type="date" required><div class="row"><div style="flex:1"><label>Ώρα</label><input name="start_time" type="time"></div><div style="flex:1"><label>Παιδί</label><select name="child_id" id="childSelect"></select></div></div><label>Κατηγορία</label><select name="category"><option value="other">Άλλο</option><option value="school">Σχολείο</option><option value="sports">Αθλητισμός</option><option value="lesson">Μάθημα</option><option value="health">Υγεία</option></select><label>Τοποθεσία</label><input name="location" maxlength="160"><label>Σημειώσεις</label><textarea name="notes" rows="3" maxlength="2000"></textarea><p class="row spread"><button type="button" class="light" id="cancelActivity">Ακύρωση</button><button>Αποθήκευση</button></p></form></dialog>
+<script src="./config.js"></script><script type="module">
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
+const q=(s)=>document.querySelector(s), show=(s,on)=>q(s).classList.toggle('hidden',!on);
+const cfg=window.FAMILY_PLANNER_CONFIG||{};
+const configured=/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(cfg.supabaseUrl||'') && (cfg.supabasePublishableKey||'').length>20;
+const db=configured?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey):null;
+let user=null,family=null,children=[],activities=[],month=new Date(),chosen=new Date(),signUp=false;
+const iso=(d)=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+const parse=(s)=>new Date(s+'T12:00:00'), format=(d,opts)=>new Intl.DateTimeFormat('el-GR',opts).format(d);
+function node(tag,text='',cls=''){let e=document.createElement(tag);e.textContent=text;if(cls)e.className=cls;return e}
+function msg(text,bad=false){q('#status').textContent=text;q('#status').className=bad?'error':'ok'}
+function err(e){msg(e?.message||String(e),true)}
+async function load(){
+ const {data:member,error:me}=await db.from('family_members').select('family_id').eq('user_id',user.id).maybeSingle();if(me)throw me;
+ if(!member){family=null;show('#familySetup',true);show('#app',false);return}
+ const {data:f,error:fe}=await db.from('families').select('*').eq('id',member.family_id).single();if(fe)throw fe;family=f;
+ const [cr,ar]=await Promise.all([db.from('children').select('*').eq('family_id',f.id),db.from('activities').select('*').eq('family_id',f.id).order('activity_date')]);
+ if(cr.error)throw cr.error;if(ar.error)throw ar.error;children=cr.data;activities=ar.data;show('#familySetup',false);show('#app',true);render()
+}
+async function session(){
+ if(!db){show('#setup',true);return}show('#setup',false);const {data:{user:u}}=await db.auth.getUser();user=u;
+ show('#auth',!u);show('#logout',!!u);q('#who').textContent=u?(u.user_metadata?.full_name||u.email):'';
+ if(!u){show('#app',false);show('#familySetup',false);return}
+ try{await load()}catch(e){err(e)}
+}
+q('#authSwitch').onclick=()=>{signUp=!signUp;show('#nameLabel',signUp);show('#nameInput',signUp);q('#authSubmit').textContent=signUp?'Εγγραφή':'Σύνδεση';q('#authSwitch').textContent=signUp?'Έχω ήδη λογαριασμό':'Δημιουργία λογαριασμού'};
+q('#authForm').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target);const email=d.get('email'),password=d.get('password');let r=signUp?await db.auth.signUp({email,password,options:{data:{full_name:d.get('full_name')}}}):await db.auth.signInWithPassword({email,password});
+ q('#authMsg').textContent=r.error?r.error.message:(signUp?'Έλεγξε το email σου για επιβεβαίωση.':'');if(!r.error)await session()};
+q('#logout').onclick=async()=>{await db.auth.signOut();await session()};
+q('#createFamily').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target);const r=await db.rpc('create_family',{p_name:d.get('name'),p_display_name:user.user_metadata?.full_name||'Μέλος'});if(r.error)q('#familyMsg').textContent=r.error.message;else await load()};
+q('#joinFamily').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target);const r=await db.rpc('join_family',{p_invite_code:d.get('code'),p_display_name:user.user_metadata?.full_name||'Μέλος'});if(r.error)q('#familyMsg').textContent=r.error.message;else await load()};
+q('#prevMonth').onclick=()=>{month=new Date(month.getFullYear(),month.getMonth()-1,1);render()};
+q('#nextMonth').onclick=()=>{month=new Date(month.getFullYear(),month.getMonth()+1,1);render()};
+q('#today').onclick=()=>{chosen=new Date();month=new Date();render()};
+function render(){
+ q('#familyName').textContent=family.name;q('#invite').textContent=family.invite_code;
+ q('#monthName').textContent=format(month,{month:'long',year:'numeric'});
+ const cal=q('#calendar');cal.replaceChildren();
+ for(const name of ['Δε','Τρ','Τε','Πε','Πα','Σα','Κυ'])cal.append(node('div',name,'dayname'));
+ const start=new Date(month.getFullYear(),month.getMonth(),1);start.setDate(start.getDate()-((start.getDay()+6)%7));
+ for(let i=0;i<42;i++){let d=new Date(start);d.setDate(start.getDate()+i);let ds=iso(d);
+ let cell=node('button','','day'+(d.getMonth()!==month.getMonth()?' out':'')+(ds===iso(chosen)?' chosen':'')+(ds===iso(new Date())?' current':''));
+ cell.type='button';cell.append(node('b',String(d.getDate())));let todays=activities.filter(a=>a.activity_date===ds);
+ todays.slice(0,2).forEach(a=>cell.append(node('em',(a.start_time?a.start_time.slice(0,5)+' ':'')+a.title)));if(todays.length>2)cell.append(node('em','+'+(todays.length-2)));
+ cell.onclick=()=>{chosen=d;render()};cal.append(cell)}
+ q('#dayTitle').textContent=format(chosen,{weekday:'long',day:'numeric',month:'long'});
+ const list=q('#dayList');list.replaceChildren();const items=activities.filter(a=>a.activity_date===iso(chosen)).sort((a,b)=>(a.start_time||'').localeCompare(b.start_time||''));
+ if(!items.length)list.append(node('p','Δεν υπάρχουν δραστηριότητες.','muted'));
+ for(const a of items){let card=node('div','','item'+(a.is_done?' done':'')),left=node('div'),right=node('div','','actions'),kid=children.find(c=>c.id===a.child_id);
+ if(kid)card.style.borderLeftColor=kid.color;
+ left.append(node('b',(a.start_time?a.start_time.slice(0,5)+' · ':'')+a.title));left.append(node('small',(kid?kid.name+' · ':'')+a.category+(a.location?' · '+a.location:'')));
+ if(a.notes)left.append(node('p',a.notes));
+ const done=node('button',a.is_done?'↩ Επαναφορά':'✓ Έγινε','light sm');done.onclick=()=>mutate(a.id,{is_done:!a.is_done});
+ const edit=node('button','Επεξεργασία','light sm');edit.onclick=()=>openActivity(a);
+ const del=node('button','Διαγραφή','danger sm');del.onclick=async()=>{if(confirm('Να διαγραφεί η δραστηριότητα;')){let r=await db.from('activities').delete().eq('id',a.id).eq('family_id',family.id);if(r.error)err(r.error);else await load()}};
+ right.append(done,edit,del);card.append(left,right);list.append(card)}
+ const kids=q('#childrenList');kids.replaceChildren();if(!children.length)kids.append(node('p','Δεν έχεις προσθέσει παιδιά.','muted'));
+ children.forEach(c=>{const x=node('div','','row');const p=node('span','● '+c.name);p.style.color=c.color;x.append(p);kids.append(x)})}
+async function mutate(id,patch){const r=await db.from('activities').update(patch).eq('id',id).eq('family_id',family.id);if(r.error)err(r.error);else await load()}
+function openActivity(a){let form=q('#activityForm');form.reset();form.elements.id.value=a?.id||'';form.elements.title.value=a?.title||'';form.elements.activity_date.value=a?.activity_date||iso(chosen);form.elements.start_time.value=a?.start_time?.slice(0,5)||'';form.elements.category.value=a?.category||'other';form.elements.location.value=a?.location||'';form.elements.notes.value=a?.notes||'';
+ const sel=q('#childSelect');sel.replaceChildren(new Option('Γενικό / Όλη η οικογένεια',''));children.forEach(c=>sel.add(new Option(c.name,c.id)));sel.value=a?.child_id||'';q('#activityDialog').showModal()}
+q('#newActivity').onclick=()=>openActivity(null);q('#cancelActivity').onclick=()=>q('#activityDialog').close();
+q('#activityForm').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target);const id=d.get('id');const obj={family_id:family.id,title:d.get('title').trim(),activity_date:d.get('activity_date'),start_time:d.get('start_time')||null,child_id:d.get('child_id')||null,category:d.get('category'),location:d.get('location'),notes:d.get('notes')};
+const r=id?await db.from('activities').update(obj).eq('id',id).eq('family_id',family.id):await db.from('activities').insert({...obj,created_by:user.id});
+if(r.error)err(r.error);else{q('#activityDialog').close();chosen=parse(obj.activity_date);month=new Date(chosen);await load()}}
+q('#newChild').onclick=async()=>{const name=prompt('Όνομα παιδιού:');if(!name?.trim())return;const r=await db.from('children').insert({family_id:family.id,name:name.trim().slice(0,80)});if(r.error)err(r.error);else await load()};
+if(db){db.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT')session()});setInterval(async()=>{if(user&&family&&!q('#activityDialog').open)try{await load()}catch{}},30000)}
+session();
+</script></body></html>
