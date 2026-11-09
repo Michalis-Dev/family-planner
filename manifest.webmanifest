@@ -1,0 +1,11 @@
+{
+  "name": "Family Planner",
+  "short_name": "Family Planner",
+  "description": "Ιδιωτικό οικογενειακό ημερολόγιο",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7f9",
+  "theme_color": "#164455",
+  "lang": "el"
+}
