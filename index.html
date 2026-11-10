@@ -18,7 +18,11 @@ dialog{border:0;border-radius:20px;padding:24px;width:min(95vw,480px);box-shadow
 <main>
 <section id="setup" class="panel auth"><h1>Καλώς ήρθες!</h1><div class="notice">Η σύνδεση στη βάση δεν έχει ρυθμιστεί. Δεν αποθηκεύονται δεδομένα στο GitHub.</div><p>Για να ξεκινήσεις, δημιούργησε ένα δωρεάν Supabase project, εκτέλεσε το <code>schema.sql</code> και συμπλήρωσε το <code>config.js</code> με το Project URL και το publishable key.</p><p class="muted">Μην τοποθετήσεις ποτέ service_role / secret key στον κώδικα.</p></section>
 <section id="auth" class="panel auth hidden"><h1>Πρόσβαση στην οικογένεια</h1><p class="muted">Μόνο εγκεκριμένοι λογαριασμοί μπορούν να διαβάσουν τις δραστηριότητες.</p>
-<form id="authForm"><label>Email</label><input name="email" type="email" required autocomplete="email"><label>Κωδικός</label><input name="password" type="password" required minlength="8" autocomplete="current-password"><label id="nameLabel" class="hidden">Το όνομά σου</label><input id="nameInput" name="full_name" class="hidden" maxlength="80"><p><button id="authSubmit">Σύνδεση</button> <button type="button" class="light" id="authSwitch">Δημιουργία λογαριασμού</button></p></form><p id="authMsg" class="muted"></p></section>
+<form id="authForm"><label>Email</label><input name="email" type="email" required autocomplete="email"><label>Κωδικός</label><input name="password" type="password" required minlength="8" autocomplete="current-password"><label id="nameLabel" class="hidden">Το όνομά σου</label><input id="nameInput" name="full_name" class="hidden" maxlength="80"><p><button id="authSubmit">Σύνδεση</button> <button type="button" class="light" id="authSwitch">Δημιουργία λογαριασμού</button></p></form><p><button type="button" class="ghost" id="forgotPassword">Ξέχασα τον κωδικό μου</button></p><p id="authMsg" class="muted"></p></section>
+<section id="recovery" class="panel auth hidden"><h1>Επαναφορά κωδικού</h1><p class="muted">Γράψε το email του λογαριασμού σου. Θα λάβεις έναν σύνδεσμο για να επιλέξεις νέο κωδικό.</p>
+<form id="recoveryRequest"><label>Email</label><input type="email" name="email" autocomplete="email" required><p class="row"><button>Αποστολή συνδέσμου</button><button type="button" class="light" id="backToLogin">Πίσω στη σύνδεση</button></p></form><p id="recoveryMsg" role="status" class="muted"></p></section>
+<section id="newPassword" class="panel auth hidden"><h1>Νέος κωδικός πρόσβασης</h1><p class="muted">Ο σύνδεσμος επιβεβαιώθηκε. Όρισε έναν νέο κωδικό.</p>
+<form id="newPasswordForm"><label>Νέος κωδικός</label><input name="password" type="password" required minlength="8" autocomplete="new-password"><label>Επιβεβαίωση νέου κωδικού</label><input name="confirm" type="password" required minlength="8" autocomplete="new-password"><p><button>Αποθήκευση νέου κωδικού</button></p></form><p id="newPasswordMsg" role="status" class="muted"></p></section>
 <section id="familySetup" class="panel auth hidden"><h1>Οικογενειακός χώρος</h1><p class="muted">Δημιούργησε οικογένεια ή χρησιμοποίησε τον κωδικό πρόσκλησης από το άλλο μέλος.</p><form id="createFamily"><label>Όνομα οικογένειας</label><input name="name" placeholder="Η οικογένειά μας" required maxlength="80"><p><button>Δημιουργία</button></p></form><hr class="line"><form id="joinFamily"><label>Κωδικός πρόσκλησης</label><input name="code" placeholder="Επικόλλησε τον κωδικό" required><p><button class="light">Συμμετοχή</button></p></form><p id="familyMsg" class="error"></p></section>
 <section id="app" class="hidden"><div class="row spread"><div><h1 id="familyName">Ημερολόγιο</h1><p class="muted">Όλες οι δραστηριότητες σε ένα μέρος</p></div><div class="row"><button id="newActivity">+ Νέα δραστηριότητα</button></div></div>
 <div class="grid"><section class="panel"><div class="row spread"><h2 id="monthName"></h2><div class="row"><button class="light sm" id="prevMonth">‹</button><button class="light sm" id="today">Σήμερα</button><button class="light sm" id="nextMonth">›</button></div></div><div class="calendar" id="calendar"></div></section>
@@ -32,7 +36,7 @@ const q=(s)=>document.querySelector(s), show=(s,on)=>q(s).classList.toggle('hidd
 const cfg=window.FAMILY_PLANNER_CONFIG||{};
 const configured=/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(cfg.supabaseUrl||'') && (cfg.supabasePublishableKey||'').length>20;
 const db=configured?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey):null;
-let user=null,family=null,children=[],activities=[],month=new Date(),chosen=new Date(),signUp=false;
+let user=null,family=null,children=[],activities=[],month=new Date(),chosen=new Date(),signUp=false,recovering=false;
 const iso=(d)=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 const parse=(s)=>new Date(s+'T12:00:00'), format=(d,opts)=>new Intl.DateTimeFormat('el-GR',opts).format(d);
 function node(tag,text='',cls=''){let e=document.createElement(tag);e.textContent=text;if(cls)e.className=cls;return e}
@@ -47,14 +51,21 @@ async function load(){
 }
 async function session(){
  if(!db){show('#setup',true);return}show('#setup',false);const {data:{user:u}}=await db.auth.getUser();user=u;
- show('#auth',!u);show('#logout',!!u);q('#who').textContent=u?(u.user_metadata?.full_name||u.email):'';
- if(!u){show('#app',false);show('#familySetup',false);return}
+ show('#auth',!u&&!recovering);show('#logout',!!u&&!recovering);q('#who').textContent=u?(u.user_metadata?.full_name||u.email):'';
+ if(!u || recovering){show('#app',false);show('#familySetup',false);return}
  try{await load()}catch(e){err(e)}
 }
 q('#authSwitch').onclick=()=>{signUp=!signUp;show('#nameLabel',signUp);show('#nameInput',signUp);q('#authSubmit').textContent=signUp?'Εγγραφή':'Σύνδεση';q('#authSwitch').textContent=signUp?'Έχω ήδη λογαριασμό':'Δημιουργία λογαριασμού'};
 q('#authForm').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target);const email=d.get('email'),password=d.get('password');let r=signUp?await db.auth.signUp({email,password,options:{data:{full_name:d.get('full_name')},emailRedirectTo:new URL('./',window.location.href).href}}):await db.auth.signInWithPassword({email,password});
  q('#authMsg').textContent=r.error?r.error.message:(signUp?'Έλεγξε το email σου για επιβεβαίωση.':'');if(!r.error)await session()};
 q('#logout').onclick=async()=>{await db.auth.signOut();await session()};
+q('#forgotPassword').onclick=()=>{show('#auth',false);show('#recovery',true);q('#recoveryRequest').elements.email.value=q('#authForm').elements.email.value||'';q('#recoveryMsg').textContent=''};
+q('#backToLogin').onclick=()=>{show('#recovery',false);show('#auth',true)};
+q('#recoveryRequest').onsubmit=async e=>{e.preventDefault();const email=new FormData(e.target).get('email');const btn=e.target.querySelector('button[type="submit"],button:not([type])');btn.disabled=true;
+ try{const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:new URL('./',window.location.href).href});q('#recoveryMsg').textContent=error?error.message:'Αν υπάρχει λογαριασμός με αυτό το email, θα λάβεις σύνδεσμο επαναφοράς. Έλεγξε και τα ανεπιθύμητα.'}catch(ex){q('#recoveryMsg').textContent=ex.message}finally{btn.disabled=false}};
+q('#newPasswordForm').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target),password=d.get('password');if(password!==d.get('confirm')){q('#newPasswordMsg').textContent='Οι δύο κωδικοί δεν ταιριάζουν.';return}
+ const {error}=await db.auth.updateUser({password});if(error){q('#newPasswordMsg').textContent=error.message;return}
+ recovering=false;show('#newPassword',false);q('#newPasswordMsg').textContent='';await db.auth.signOut();show('#auth',true);q('#authMsg').textContent='Ο κωδικός ενημερώθηκε. Συνδέσου με τον νέο κωδικό.';await session()};
 q('#createFamily').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target);const r=await db.rpc('create_family',{p_name:d.get('name'),p_display_name:user.user_metadata?.full_name||'Μέλος'});if(r.error)q('#familyMsg').textContent=r.error.message;else await load()};
 q('#joinFamily').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target);const r=await db.rpc('join_family',{p_invite_code:d.get('code'),p_display_name:user.user_metadata?.full_name||'Μέλος'});if(r.error)q('#familyMsg').textContent=r.error.message;else await load()};
 q('#prevMonth').onclick=()=>{month=new Date(month.getFullYear(),month.getMonth()-1,1);render()};
@@ -92,6 +103,6 @@ q('#activityForm').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.
 const r=id?await db.from('activities').update(obj).eq('id',id).eq('family_id',family.id):await db.from('activities').insert({...obj,created_by:user.id});
 if(r.error)err(r.error);else{q('#activityDialog').close();chosen=parse(obj.activity_date);month=new Date(chosen);await load()}}
 q('#newChild').onclick=async()=>{const name=prompt('Όνομα παιδιού:');if(!name?.trim())return;const r=await db.from('children').insert({family_id:family.id,name:name.trim().slice(0,80)});if(r.error)err(r.error);else await load()};
-if(db){db.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT')session()});setInterval(async()=>{if(user&&family&&!q('#activityDialog').open)try{await load()}catch{}},30000)}
+if(db){db.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY'){recovering=true;show('#auth',false);show('#recovery',false);show('#app',false);show('#familySetup',false);show('#newPassword',true);show('#logout',false)}else if(event==='SIGNED_OUT'&&!recovering)session()});setInterval(async()=>{if(user&&family&&!q('#activityDialog').open)try{await load()}catch{}},30000)}
 session();
 </script></body></html>
